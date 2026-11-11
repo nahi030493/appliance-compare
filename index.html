@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>新家家電比價表</title>
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+--bg:#f7f6f2;--card:#fff;--tx:#222;--mu:#777;--bd:#ddd8cc;--ac:#c2410c;--best:#dcfce7;--bestt:#166534;--hd:#efece3}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#1b1a18;--card:#262522;--tx:#eee;--mu:#9a9690;--bd:#3d3b36;--ac:#fb923c;--best:#14532d;--bestt:#bbf7d0;--hd:#302e2a}}
+:root[data-theme="dark"]{--bg:#1b1a18;--card:#262522;--tx:#eee;--mu:#9a9690;--bd:#3d3b36;--ac:#fb923c;--best:#14532d;--bestt:#bbf7d0;--hd:#302e2a}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.5 -apple-system,"PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif;padding:16px}
+h1{font-size:22px;margin:0 0 4px}.sub{color:var(--mu);font-size:13px;margin-bottom:14px}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+.tab{padding:6px 14px;border:1px solid var(--bd);border-radius:20px;background:var(--card);color:var(--tx);cursor:pointer;font-size:14px}
+.tab.on{background:var(--ac);color:#fff;border-color:var(--ac)}
+.wrap{overflow-x:auto;border:1px solid var(--bd);border-radius:10px;background:var(--card)}
+table{border-collapse:collapse;width:100%;min-width:760px}
+th,td{border-bottom:1px solid var(--bd);padding:6px;vertical-align:top;text-align:left}
+th{background:var(--hd);font-weight:600}
+input,textarea{width:100%;box-sizing:border-box;border:1px solid var(--bd);border-radius:6px;padding:6px;background:transparent;color:var(--tx);font:inherit}
+textarea{font-size:12px;resize:vertical;min-height:44px;margin-top:4px;color:var(--ac)}
+td.p input{text-align:right}
+td.best input{background:var(--best);color:var(--bestt);font-weight:700;border-color:var(--bestt)}
+.low{font-size:13px;white-space:nowrap}.low b{color:var(--bestt);background:var(--best);padding:1px 6px;border-radius:4px}
+button.x{border:0;background:none;color:var(--mu);cursor:pointer;font-size:16px}
+.bar{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.btn{padding:7px 14px;border:1px solid var(--bd);border-radius:8px;background:var(--card);color:var(--tx);cursor:pointer;font:inherit;font-size:14px}
+.tip{color:var(--mu);font-size:12px;margin-top:12px}
+#modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);align-items:center;justify-content:center;z-index:50;padding:16px}
+#modal .box{background:var(--card);color:var(--tx);border:1px solid var(--bd);border-radius:12px;padding:20px;max-width:340px;width:100%;text-align:center}
+#modal h2{font-size:18px;margin:0 0 8px}#modal p{color:var(--mu);font-size:14px;margin:0 0 16px}
+#modal .row{display:flex;gap:10px;justify-content:center}
+#modal .ok{background:#dc2626;color:#fff;border-color:#dc2626}
+</style>
+</head>
+<body>
+<h1>🏠 新家家電比價表</h1>
+<div class="sub">填入各通路價格，最低價自動標綠。商場欄位下方可記錄優惠（如家電展折扣、折價券、分期、贈品）。資料自動存在這支瀏覽器裡。</div>
+<div class="tabs" id="tabs"></div>
+<div class="wrap"><table id="tbl"></table></div>
+<div class="bar">
+<button class="btn" data-a="addrow">＋ 新增品牌／型號</button>
+<button class="btn" data-a="addstore">＋ 新增通路</button>
+<button class="btn" data-a="addcat">＋ 新增品類</button>
+<button class="btn" data-a="delcat">刪除此品類</button>
+<button class="btn" data-a="reset">重置全部</button>
+</div>
+<div class="tip">提醒：價格請以現場／官網為準，並確認是否含安裝、運送、舊機回收與保固。</div>
+<div id="modal"><div class="box"><h2>確定要重置嗎？</h2><p>所有已填的價格、備註和自訂的通路／品類都會被清除，無法復原。</p><div class="row"><button class="btn" data-a="resetno">取消</button><button class="btn ok" data-a="resetok">確定重置</button></div></div></div>
+<script>
+const KEY='appl-compare-v1';
+const mk=(b)=>b.map(x=>({id:Math.random().toString(36).slice(2,8),brand:x,model:'',prices:{},note:''}));
+const def=()=>({cur:0,stores:[
+{id:'s1',name:'家電展',note:''},{id:'s2',name:'燦坤',note:''},{id:'s3',name:'全國電子',note:''},
+{id:'s4',name:'順發',note:''},{id:'s5',name:'新光三越',note:''}],
+cats:[
+{name:'冷氣',rows:mk(['日立','三菱電機','大金','三菱重工','富士通將軍','國際牌','東元'])},
+{name:'冰箱',rows:mk(['日立','三菱電機','國際牌','夏普','東芝','LG'])},
+{name:'洗衣機／烘衣機',rows:mk(['日立','國際牌','LG','三星','東芝'])},
+{name:'電視',rows:mk(['Sony','LG','三星','TCL','夏普'])},
+{name:'洗碗機／除濕機',rows:mk(['林內','櫻花','國際牌','日立'])}]});
+let S;try{S=JSON.parse(localStorage.getItem(KEY))||def()}catch(e){S=def()}
+const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}};
+const esc=s=>String(s??'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
+const num=v=>{const n=parseFloat(String(v||'').replace(/[^\d.]/g,''));return isNaN(n)?null:n};
+function render(){
+ if(S.cur>=S.cats.length)S.cur=0;
+ document.getElementById('tabs').innerHTML=S.cats.map((c,i)=>`<button class="tab ${i==S.cur?'on':''}" data-a="tab" data-i="${i}">${esc(c.name)}</button>`).join('')+`<input data-a="cname" value="${esc(S.cats[S.cur].name)}" title="修改目前品類名稱" style="width:130px;margin-left:auto">`;
+ const c=S.cats[S.cur];
+ let h='<tr><th style="min-width:90px">品牌</th><th style="min-width:130px">型號／規格</th>';
+ S.stores.forEach((s,i)=>{h+=`<th style="min-width:130px"><div style="display:flex;gap:4px"><input data-a="sname" data-i="${i}" value="${esc(s.name)}"><button class="x" data-a="delstore" data-i="${i}">✕</button></div><textarea data-a="snote" data-i="${i}" placeholder="優惠備註：例如家電展 9 折、滿額折 3000…">${esc(s.note)}</textarea></th>`});
+ h+='<th>最低價</th><th style="min-width:120px">備註</th><th></th></tr>';
+ c.rows.forEach((r,ri)=>{
+  const vals=S.stores.map(s=>num(r.prices[s.id]));
+  const ok=vals.filter(v=>v!==null);const min=ok.length?Math.min(...ok):null;
+  h+=`<tr><td><input data-a="brand" data-r="${ri}" value="${esc(r.brand)}"></td><td><input data-a="model" data-r="${ri}" value="${esc(r.model)}" placeholder="例：RAC-36NP"></td>`;
+  S.stores.forEach((s,i)=>{h+=`<td class="p ${min!==null&&vals[i]===min&&ok.length>1?'best':''}"><input inputmode="numeric" data-a="price" data-r="${ri}" data-s="${s.id}" value="${esc(r.prices[s.id]||'')}" placeholder="價格"></td>`});
+  const bs=min!==null?S.stores.filter((s,i)=>vals[i]===min).map(s=>s.name).join('、'):'';
+  const mx=ok.length?Math.max(...ok):0;
+  h+=`<td class="low">${min!==null?`<b>${bs}</b><br>$${min.toLocaleString()}${ok.length>1&&mx>min?`<br><span style="color:var(--mu)">省 $${(mx-min).toLocaleString()}</span>`:''}`:'—'}</td>`;
+  h+=`<td><input data-a="rnote" data-r="${ri}" value="${esc(r.note)}"></td><td><button class="x" data-a="delrow" data-r="${ri}">✕</button></td></tr>`;
+ });
+ document.getElementById('tbl').innerHTML=h;
+}
+document.addEventListener('change',e=>{
+ const t=e.target,a=t.dataset.a;if(!a||t.tagName==='BUTTON')return;
+ const c=S.cats[S.cur],r=c.rows[t.dataset.r];
+ if(a==='cname')c.name=t.value;else if(a==='sname')S.stores[t.dataset.i].name=t.value;
+ else if(a==='snote')S.stores[t.dataset.i].note=t.value;
+ else if(a==='brand')r.brand=t.value;
+ else if(a==='model')r.model=t.value;
+ else if(a==='rnote')r.note=t.value;
+ else if(a==='price')r.prices[t.dataset.s]=t.value;
+ save();render();
+});
+document.addEventListener('click',e=>{
+ const t=e.target.closest('button');if(!t||!t.dataset.a)return;
+ const a=t.dataset.a,c=S.cats[S.cur];
+ if(a==='tab')S.cur=+t.dataset.i;
+ else if(a==='addrow')c.rows.push({id:Math.random().toString(36).slice(2,8),brand:'',model:'',prices:{},note:''});
+ else if(a==='delrow'){c.rows.splice(t.dataset.r,1);}
+ else if(a==='addstore'){S.stores.push({id:'s'+Date.now(),name:'新通路',note:''});}
+ else if(a==='delstore'){S.stores.splice(t.dataset.i,1);}
+ else if(a==='addcat'){S.cats.push({name:'新品類',rows:mk(['','',''])});S.cur=S.cats.length-1;}
+ else if(a==='delcat'){if(S.cats.length>1){S.cats.splice(S.cur,1);S.cur=0;}}
+ else if(a==='reset'){document.getElementById('modal').style.display='flex';return;}
+ else if(a==='resetno'){document.getElementById('modal').style.display='none';return;}
+ else if(a==='resetok'){document.getElementById('modal').style.display='none';S=def();}
+ save();render();
+});
+render();
+</script>
+</body>
+</html>
